@@ -1,26 +1,20 @@
 package main
 
 import (
-	//"encoding/json"
-	//"fmt"A
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 
-	//"strings"
+	"github.com/seebasoft/prompter/goback/models"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/gin-gonic/gin"
 )
 
-// User represents a user object
-type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-}
+// local type aliases within seebasoft/prompter/goback/models package
+type User models.User
 
 // handleRoot serves the /rest root endpoint
 func handleRoot(c *gin.Context) {
