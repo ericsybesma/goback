@@ -1,0 +1,26 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: seebasoft
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: prompter
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: goback-graphql
+
+provider:
+  name: aws
+  runtime: provided.al2
+
+package:
+  individually: true # <- package each function individually, to prevent file name conflicts
+
+functions:
+  api:
+    handler: api/graphql/bootstrap
+    package:
+      artifact: api/graphql/main.zip
+    events:
+      - httpApi:
+          path: /graphql
+          method: any
+      - httpApi:
+          path: /graphql/{proxy+}
+          method: any
