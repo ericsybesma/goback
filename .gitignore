@@ -1,0 +1,6 @@
+api/graphql/main.zip
+api/rest/main.zip
+.serverless/cloudformation-template-update-stack.json
+.serverless/meta.json
+.serverless/
+.serverless/serverless-state.json

@@ -103,7 +103,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-bdbb5353-2602",
-                "S3Key": "serverless/goback-graphql/dev/1734027160961-2024-12-12T18:12:40.961Z/main.zip"
+                "S3Key": "serverless/goback-graphql/dev/1734046010827-2024-12-12T23:26:50.827Z/main.zip"
               },
               "Handler": "api/graphql/bootstrap",
               "Runtime": "provided.al2",
@@ -121,14 +121,14 @@
               "ApiLogGroup"
             ]
           },
-          "ApiLambdaVersionMVbW8lnSGtto30YjMPiIfuSkkxBEH26RsxEkObxPjc": {
+          "ApiLambdaVersionNuAFFB2F6KD7gsPOQ2ONTaTiLEyyEYAxwM3kI6us": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "JyAInAZoYSsLnd54FUHzL7VLZTtiNY7EhBhL+TvVrwA="
+              "CodeSha256": "bMlKPEz4Gr/CX5FLZA9kPjOgjhPSlxjTIA3EiXxyM5A="
             }
           },
           "HttpApi": {
@@ -255,7 +255,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionMVbW8lnSGtto30YjMPiIfuSkkxBEH26RsxEkObxPjc"
+              "Ref": "ApiLambdaVersionNuAFFB2F6KD7gsPOQ2ONTaTiLEyyEYAxwM3kI6us"
             },
             "Export": {
               "Name": "sls-goback-graphql-dev-ApiLambdaFunctionQualifiedArn"
@@ -329,7 +329,7 @@
         "timeout": 6,
         "runtime": "provided.al2",
         "vpc": {},
-        "versionLogicalId": "ApiLambdaVersionMVbW8lnSGtto30YjMPiIfuSkkxBEH26RsxEkObxPjc"
+        "versionLogicalId": "ApiLambdaVersionNuAFFB2F6KD7gsPOQ2ONTaTiLEyyEYAxwM3kI6us"
       }
     },
     "configValidationMode": "warn",
@@ -345,7 +345,7 @@
         "individually": true,
         "artifactsS3KeyDirname": "serverless/goback-graphql/dev/code-artifacts",
         "deploymentBucket": "serverless-framework-deployments-us-east-1-bdbb5353-2602",
-        "artifactDirectoryName": "serverless/goback-graphql/dev/1734027160961-2024-12-12T18:12:40.961Z"
+        "artifactDirectoryName": "serverless/goback-graphql/dev/1734046010827-2024-12-12T23:26:50.827Z"
       },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
@@ -359,7 +359,7 @@
   },
   "package": {
     "individually": true,
-    "artifactDirectoryName": "serverless/goback-graphql/dev/1734027160961-2024-12-12T18:12:40.961Z",
+    "artifactDirectoryName": "serverless/goback-graphql/dev/1734046010827-2024-12-12T23:26:50.827Z",
     "artifact": ""
   }
 }
