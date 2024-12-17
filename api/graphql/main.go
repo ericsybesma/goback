@@ -46,8 +46,8 @@ func handleText(c *gin.Context) {
         `)
 }
 
-// handleUsers serves the users endpoint
-func handleUsers(c *gin.Context) {
+// handleGetUsers serves the users endpoint
+func handleGetUsers(c *gin.Context) {
 	users := []User{
 		{ID: 1, Username: "John Doe", Email: "john_doe@gmail.com"},
 		{ID: 2, Username: "Jane Smith", Email: "jane_smith@gmail.com"},
@@ -109,6 +109,6 @@ func initGin() *gin.Engine {
 	engine := gin.Default()
 	engine.GET("/graphql", handleRoot)
 	engine.GET("/graphql/text", handleText)
-	engine.GET("/graphql/users", handleUsers)
+	engine.GET("/graphql/users", handleGetUsers)
 	return engine
 }

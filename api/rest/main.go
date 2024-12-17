@@ -6,50 +6,111 @@ import (
 	"net/http/httptest"
 	"os"
 
+	"github.com/seebasoft/prompter/goback/database"
 	"github.com/seebasoft/prompter/goback/models"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/gin-gonic/gin"
 )
 
-// local type aliases within seebasoft/prompter/goback/models package
-type User models.User
+var ginEngine *gin.Engine
+var dbClient *mongo.Client
 
 // handleRoot serves the /rest root endpoint
-func handleRoot(c *gin.Context) {
+func getRoot(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"title": "Hello API Handler",
-		"body":  "API Response",
+		"body":  "Query user models, such as /rest/users",
 	})
 }
 
-// handleText serves the /rest/text endpoint
-func handleText(c *gin.Context) {
-	c.Header("Content-Type", "text/html")
-	c.String(http.StatusOK, `
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <title>Hello</title>
-        </head>
-        <body>
-        <h1>Hello, World!</h1>
-        </body>
-        </html>
-        `)
+// handleUsers serves the /rest/users endpoint
+func getUsers(c *gin.Context) {
+	users, err := database.GetUsers(dbClient)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
 }
 
-// handleUsers serves the /rest/users endpoint
-func handleUsers(c *gin.Context) {
-	users := []User{
-		{ID: 1, Username: "John Doe", Email: "john_doe@gmail.com"},
-		{ID: 2, Username: "Jane Smith", Email: "jane_smith@gmail.com"},
+func getUser(c *gin.Context) {
+	id := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
 	}
-	c.JSON(http.StatusOK, users)
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"message": "Hello3,  World!",
-	// })
+
+	user, err := database.GetUserByID(dbClient, objectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func createUser(c *gin.Context) {
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user.ID = primitive.NewObjectID()
+	_, err := database.CreateUser(dbClient, user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, user)
+}
+
+func updateUser(c *gin.Context) {
+	id := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var user models.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error2": err.Error()})
+		return
+	}
+
+	user.ID = objectID
+	_, err = database.UpdateUser(dbClient, objectID, user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func deleteUser(c *gin.Context) {
+	id := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	_, err = database.DeleteUser(dbClient, objectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
 }
 
 func convertHeader(header http.Header) map[string]string {
@@ -83,10 +144,9 @@ func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPR
 	}, nil
 }
 
-var ginEngine *gin.Engine
-
 func main() {
 	ginEngine = initGin()
+	initDb()
 
 	// Determine if running in Lambda or locally
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
@@ -101,8 +161,19 @@ func main() {
 
 func initGin() *gin.Engine {
 	engine := gin.Default()
-	engine.GET("/rest", handleRoot)
-	engine.GET("/rest/text", handleText)
-	engine.GET("/rest/users", handleUsers)
+	engine.GET("/rest/", getRoot)
+	engine.GET("/rest/users", getUsers)
+	engine.GET("/rest/users/:id", getUser)
+	engine.POST("/rest/users", createUser)
+	engine.PUT("/rest/users/:id", updateUser)
+	engine.DELETE("/rest/users/:id", deleteUser)
 	return engine
+}
+
+func initDb() {
+	var err error
+	dbClient, err = database.ConnectToMongoDB()
+	if err != nil {
+		log.Fatalf("failed to connect to MongoDB: %v", err)
+	}
 }

@@ -4,3 +4,13 @@ api/rest/main.zip
 .serverless/meta.json
 .serverless/
 .serverless/serverless-state.json
+node_modules/.package-lock.json
+package-lock.json
+package.json
+.serverless/cloudformation-template-update-stack.json
+.serverless/cloudformation-template-update-stack.json
+.serverless/serverless-state.json
+api/graphql/bootstrap
+api/rest/bootstrap
+api/rest/main.zip
+go.sum
