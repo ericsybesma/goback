@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-
+    "bytes"
+    "io/ioutil"
+	
 	"github.com/seebasoft/prompter/goback/database"
 	"github.com/seebasoft/prompter/goback/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -80,6 +82,17 @@ func updateUser(c *gin.Context) {
 		return
 	}
 
+	
+	bodyBytes, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		log.Println("Error reading request body:", err)
+		return
+	}
+	log.Println("Received request body:", string(bodyBytes))
+	
+	// Replace the body so it can be read again
+	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error2": err.Error()})
@@ -123,19 +136,28 @@ func convertHeader(header http.Header) map[string]string {
 
 // lambdaHandler handles Lambda requests and routes them using Gin
 func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	// Ensure log output is set to stdout
+	log.SetOutput(os.Stdout)
 	log.Println("Received request path:", req.RawPath)
 	log.Println("HTTP Method:", req.RequestContext.HTTP.Method)
 	log.Println("Request Headers:", req.Headers)
+	// Explicitly flush logs
+	log.Println("Flushing logs")
+	log.Writer().(*os.File).Sync()
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	httpReq, _ := http.NewRequest(req.RequestContext.HTTP.Method, req.RawPath, nil)
+	httpReq, _ := http.NewRequest(req.RequestContext.HTTP.Method, req.RawPath, bytes.NewBufferString(req.Body))
 	ctx.Request = httpReq
 	ginEngine.ServeHTTP(w, ctx.Request)
 
 	log.Println("Response Status Code:", w.Code)
 	log.Println("Response Headers:", w.Header())
 	log.Println("Response Body: ", w.Body.String())
+
+	// Explicitly flush logs
+	log.Println("Flushing logs")
+	log.Writer().(*os.File).Sync()
 
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode: w.Code,
@@ -145,18 +167,20 @@ func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPR
 }
 
 func main() {
-	ginEngine = initGin()
-	initDb()
+    // Set log flags to include date and time
+    log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	// Determine if running in Lambda or locally
-	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
-		// Running in Lambda
-		lambda.Start(lambdaHandler)
-	} else {
-		// Running locally
-		//r := initGin()
-		ginEngine.Run(":8080")
-	}
+    ginEngine = initGin()
+    initDb()
+
+    // Determine if running in Lambda or locally
+    if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
+        // Running in Lambda
+        lambda.Start(lambdaHandler)
+    } else {
+        // Running locally
+        ginEngine.Run(":8080")
+    }
 }
 
 func initGin() *gin.Engine {

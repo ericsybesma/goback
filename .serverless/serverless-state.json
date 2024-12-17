@@ -220,7 +220,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/goback-rest/dev/1734469025834-2024-12-17T20:57:05.834Z/main.zip"
+                "S3Key": "serverless/goback-rest/dev/1734472316329-2024-12-17T21:51:56.329Z/main.zip"
               },
               "Handler": "api/rest/bootstrap",
               "Runtime": "provided.al2",
@@ -238,14 +238,14 @@
               "ApiLogGroup"
             ]
           },
-          "ApiLambdaVersionHJH1DAhLyK9ZTdtcM7N9IQSUtu2llUxrXKZR0BMniLM": {
+          "ApiLambdaVersionJvliqLFpGEtDF1iPGRfUVoDSgGV1uk5dlt3h2Rbkw": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "c396it7/5Q0IKYtDKlAfJnrP1AbImc5ADzbN4tRhCxw="
+              "CodeSha256": "nucbB5EPkQ0JgZDi7p36X6MzHiLQBWGr2TGiRxLKYsM="
             }
           },
           "HttpApi": {
@@ -401,7 +401,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionHJH1DAhLyK9ZTdtcM7N9IQSUtu2llUxrXKZR0BMniLM"
+              "Ref": "ApiLambdaVersionJvliqLFpGEtDF1iPGRfUVoDSgGV1uk5dlt3h2Rbkw"
             },
             "Export": {
               "Name": "sls-goback-rest-dev-ApiLambdaFunctionQualifiedArn"
@@ -562,7 +562,7 @@
         "timeout": 6,
         "runtime": "provided.al2",
         "vpc": {},
-        "versionLogicalId": "ApiLambdaVersionHJH1DAhLyK9ZTdtcM7N9IQSUtu2llUxrXKZR0BMniLM"
+        "versionLogicalId": "ApiLambdaVersionJvliqLFpGEtDF1iPGRfUVoDSgGV1uk5dlt3h2Rbkw"
       }
     },
     "configValidationMode": "warn",
@@ -577,7 +577,7 @@
       "package": {
         "individually": true,
         "artifactsS3KeyDirname": "serverless/goback-rest/dev/code-artifacts",
-        "artifactDirectoryName": "serverless/goback-rest/dev/1734469025834-2024-12-17T20:57:05.834Z"
+        "artifactDirectoryName": "serverless/goback-rest/dev/1734472316329-2024-12-17T21:51:56.329Z"
       },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
@@ -593,7 +593,7 @@
   },
   "package": {
     "individually": true,
-    "artifactDirectoryName": "serverless/goback-rest/dev/1734469025834-2024-12-17T20:57:05.834Z",
+    "artifactDirectoryName": "serverless/goback-rest/dev/1734472316329-2024-12-17T21:51:56.329Z",
     "artifact": ""
   }
 }
