@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
-    "bytes"
-    "io/ioutil"
-	
+
 	"github.com/seebasoft/prompter/goback/database"
 	"github.com/seebasoft/prompter/goback/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -25,7 +25,7 @@ var dbClient *mongo.Client
 func getRoot(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"title": "Hello API Handler",
-		"body":  "Query user models, such as /rest/users",
+		"body":  "Endpoints: /rest/users",
 	})
 }
 
@@ -57,21 +57,19 @@ func getUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func createUser(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+func create(c *gin.Context, dbEntity models.DbEntity) {
+	if err := c.ShouldBindJSON(dbEntity); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	dbEntity.SetID(primitive.NewObjectID())
+	_, err := database.CreateDbEntity(dbClient, dbEntity)
 
-	user.ID = primitive.NewObjectID()
-	_, err := database.CreateUser(dbClient, user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusCreated, user)
+	c.JSON(http.StatusCreated, dbEntity)
 }
 
 func updateUser(c *gin.Context) {
@@ -79,23 +77,22 @@ func updateUser(c *gin.Context) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
+		var bodyBytes bytes.Buffer
+		_, err = io.Copy(&bodyBytes, c.Request.Body)
+		if err != nil {
+			log.Println("Error reading request body:", err)
+			return
+		}
+		log.Println("Received request body:", bodyBytes.String())
 
-	
-	bodyBytes, err := ioutil.ReadAll(c.Request.Body)
-	if err != nil {
-		log.Println("Error reading request body:", err)
+		// Replace the body so it can be read again later
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	log.Println("Received request body:", string(bodyBytes))
-	
-	// Replace the body so it can be read again
-	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error2": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -167,20 +164,22 @@ func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPR
 }
 
 func main() {
-    // Set log flags to include date and time
-    log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// Set log flags to include date and time
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-    ginEngine = initGin()
-    initDb()
+	ginEngine = initGin()
 
-    // Determine if running in Lambda or locally
-    if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
-        // Running in Lambda
-        lambda.Start(lambdaHandler)
-    } else {
-        // Running locally
-        ginEngine.Run(":8080")
-    }
+	// Initialize dbClient
+	dbClient = initDb()
+
+	// Determine if running in Lambda or locally
+	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
+		// Running in Lambda
+		lambda.Start(lambdaHandler)
+	} else {
+		// Running locally
+		ginEngine.Run(":8080")
+	}
 }
 
 func initGin() *gin.Engine {
@@ -188,16 +187,18 @@ func initGin() *gin.Engine {
 	engine.GET("/rest/", getRoot)
 	engine.GET("/rest/users", getUsers)
 	engine.GET("/rest/users/:id", getUser)
-	engine.POST("/rest/users", createUser)
+	user := models.User{}
+	engine.POST("/rest/users", func(c *gin.Context) { create(c, &user) })
 	engine.PUT("/rest/users/:id", updateUser)
 	engine.DELETE("/rest/users/:id", deleteUser)
 	return engine
 }
 
-func initDb() {
+func initDb() *mongo.Client {
 	var err error
-	dbClient, err = database.ConnectToMongoDB()
+	client, err := database.ConnectToMongoDB()
 	if err != nil {
 		log.Fatalf("failed to connect to MongoDB: %v", err)
 	}
+	return client
 }

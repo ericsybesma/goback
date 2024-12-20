@@ -35,7 +35,7 @@ func ConnectToMongoDB() (*mongo.Client, error) {
 	return client, nil
 }
 
-/// Get the entire user collection, limited to 20 documents
+/// Get the entire user collection, limited to 20 entities
 func GetUsers(client *mongo.Client) ([]models.User, error) {
 	collection := client.Database("core").Collection("users")
 	cursor, err := collection.Find(context.TODO(), bson.D{}, options.Find().SetLimit(20))
@@ -75,14 +75,14 @@ func GetUsers(client *mongo.Client) ([]models.User, error) {
 		}
 		users = append(users, user)
 	}
-	
+
 	return users, nil
 }
 
 func GetUserByID(client *mongo.Client, id primitive.ObjectID) (models.User, error) {
-    collection := client.Database("core").Collection("users")
-    var bsonUser bson.M
-    err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&bsonUser)
+	collection := client.Database("core").Collection("users")
+	var bsonUser bson.M
+	err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&bsonUser)
 
 	if err != nil {
 		return models.User{}, err
@@ -94,26 +94,32 @@ func GetUserByID(client *mongo.Client, id primitive.ObjectID) (models.User, erro
 		Email:    bsonUser["email"].(string),
 	}
 
-    return user, err
+	return user, err
 }
 
 
-func CreateUser(dbClient *mongo.Client, user models.User) (*mongo.InsertOneResult, error) {
-    collection := dbClient.Database("core").Collection("users")
-    result, err := collection.InsertOne(context.Background(), bson.M{
-        "username": user.Username,
-        "email":    user.Email,
-    })
-    return result, err
+// func CreateUser(dbClient *mongo.Client, user models.User) (*mongo.InsertOneResult, error) {
+// 	collection := dbClient.Database("core").Collection("users")
+// 	result, err := collection.InsertOne(context.Background(), bson.M{
+// 		"username": user.Username,
+// 		"email":    user.Email,
+// 	})
+// 	return result, err
+// }
+
+func CreateDbEntity(dbClient *mongo.Client, entity models.DbEntity) (*mongo.InsertOneResult, error) {
+	collection := dbClient.Database(entity.DBName()).Collection(entity.CollectionName())
+	result, err := collection.InsertOne(context.Background(), entity.ToBSON(true))
+	return result, err
 }
 
 /// Update a user by ID
 func UpdateUser(dbClient *mongo.Client, id primitive.ObjectID, user models.User) (*mongo.UpdateResult, error) {
 	collection := dbClient.Database("core").Collection("users")
 	result, err := collection.UpdateOne(context.Background(), bson.M{"_id": id}, bson.M{"$set": bson.M{
-		"username": user.Username,
-		"email":    user.Email,
-	}})
+			"username": user.Username,
+			"email":    user.Email,
+		}})
 	return result, err
 }
 
@@ -122,7 +128,7 @@ func DeleteUser(dbClient *mongo.Client, id primitive.ObjectID) (*mongo.DeleteRes
 	collection := dbClient.Database("core").Collection("users")
 	result, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
 	return result, err
-}	
+}
 
 // // Ping Function
 // func Ping(client *mongo.Client) error {
@@ -134,9 +140,9 @@ func DeleteUser(dbClient *mongo.Client, id primitive.ObjectID) (*mongo.DeleteRes
 // }
 
 func DisconnectFromMongoDB(client *mongo.Client) error {
-        // Disconnect from the MongoDB server
-        if err := client.Disconnect(context.Background()); err != nil {
-                return fmt.Errorf("failed to disconnect from MongoDB: %w", err)
-        }
-        return nil
+	// Disconnect from the MongoDB server
+	if err := client.Disconnect(context.Background()); err != nil {
+		return fmt.Errorf("failed to disconnect from MongoDB: %w", err)
+	}
+	return nil
 }

@@ -14,3 +14,4 @@ api/graphql/bootstrap
 api/rest/bootstrap
 api/rest/main.zip
 go.sum
+main
