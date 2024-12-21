@@ -34,6 +34,14 @@ func (u User) ToBSON(addId bool) bson.M {
 	}
 }
 
+func (u User) FromBSON(bsonUser bson.M) DbEntity {
+	return &User{
+		ID:       bsonUser["_id"].(primitive.ObjectID),
+		Username: bsonUser["username"].(string),
+		Email:    bsonUser["email"].(string),
+	}
+}
+
 func (u User) GetID() primitive.ObjectID {
 	return u.ID
 }

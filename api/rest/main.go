@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"io"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/seebasoft/prompter/goback/database"
 	"github.com/seebasoft/prompter/goback/models"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -21,106 +20,11 @@ import (
 var ginEngine *gin.Engine
 var dbClient *mongo.Client
 
-// handleRoot serves the /rest root endpoint
 func getRoot(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"title": "Hello API Handler",
 		"body":  "Endpoints: /rest/users",
 	})
-}
-
-// handleUsers serves the /rest/users endpoint
-func getUsers(c *gin.Context) {
-	users, err := database.GetUsers(dbClient)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, users)
-}
-
-func getUser(c *gin.Context) {
-	id := c.Param("id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	user, err := database.GetUserByID(dbClient, objectID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, user)
-}
-
-func create(c *gin.Context, dbEntity models.DbEntity) {
-	if err := c.ShouldBindJSON(dbEntity); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	dbEntity.SetID(primitive.NewObjectID())
-	_, err := database.CreateDbEntity(dbClient, dbEntity)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, dbEntity)
-}
-
-func updateUser(c *gin.Context) {
-	id := c.Param("id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		var bodyBytes bytes.Buffer
-		_, err = io.Copy(&bodyBytes, c.Request.Body)
-		if err != nil {
-			log.Println("Error reading request body:", err)
-			return
-		}
-		log.Println("Received request body:", bodyBytes.String())
-
-		// Replace the body so it can be read again later
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	user.ID = objectID
-	_, err = database.UpdateUser(dbClient, objectID, user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, user)
-}
-
-func deleteUser(c *gin.Context) {
-	id := c.Param("id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	_, err = database.DeleteUser(dbClient, objectID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
 }
 
 func convertHeader(header http.Header) map[string]string {
@@ -153,7 +57,6 @@ func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPR
 	log.Println("Response Body: ", w.Body.String())
 
 	// Explicitly flush logs
-	log.Println("Flushing logs")
 	log.Writer().(*os.File).Sync()
 
 	return events.APIGatewayV2HTTPResponse{
@@ -182,15 +85,22 @@ func main() {
 	}
 }
 
+func registerRoutes(engine *gin.Engine, resourceName string, dbEntity models.DbEntity) {
+	engine.POST(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { Create(c, dbEntity) })
+	engine.GET(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { ReadAll(c, dbEntity) })
+	engine.GET(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Read(c, dbEntity) })
+	engine.PUT(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Update(c, dbEntity) })
+	//engine.DELETE(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { DoDelete(c, dbEntity) })
+}
+
+func registerRoot(engine *gin.Engine) {
+	engine.GET("/", getRoot)
+}
+
 func initGin() *gin.Engine {
 	engine := gin.Default()
-	engine.GET("/rest/", getRoot)
-	engine.GET("/rest/users", getUsers)
-	engine.GET("/rest/users/:id", getUser)
-	user := models.User{}
-	engine.POST("/rest/users", func(c *gin.Context) { create(c, &user) })
-	engine.PUT("/rest/users/:id", updateUser)
-	engine.DELETE("/rest/users/:id", deleteUser)
+	registerRoot(engine)
+	registerRoutes(engine, "users", &models.User{})
 	return engine
 }
 

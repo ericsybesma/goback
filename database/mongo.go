@@ -79,6 +79,42 @@ func GetUsers(client *mongo.Client) ([]models.User, error) {
 	return users, nil
 }
 
+//implement GetAll instead of GetUsers	
+func GetAll(client *mongo.Client, entity models.DbEntity) ([]models.DbEntity, error) {
+	collection := client.Database(entity.DBName()).Collection(entity.CollectionName())
+	cursor, err := collection.Find(context.Background(), bson.D{}, options.Find().SetLimit(20))
+	if err != nil {
+		return nil, fmt.Errorf("failed to find entities: %w", err)
+	}
+	defer cursor.Close(context.Background())
+
+	var bsonEntities []bson.M
+	if err = cursor.All(context.Background(), &bsonEntities); err != nil {
+		return nil, fmt.Errorf("failed to decode entities: %w", err)
+	}
+
+	var entities []models.DbEntity
+	for _, bsonEntity := range bsonEntities {
+		entities = append(entities, entity.FromBSON(bsonEntity))
+	}
+
+	return entities, nil
+}
+
+// implement GetDbEntityByID(dbClient, dbEntity, objectID)
+func GetDbEntityByID(client *mongo.Client, entity models.DbEntity, id primitive.ObjectID) (models.DbEntity, error) {
+	collection := client.Database(entity.DBName()).Collection(entity.CollectionName())
+	var bsonEntity bson.M
+	err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&bsonEntity)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return entity.FromBSON(bsonEntity), nil
+}
+
+
 func GetUserByID(client *mongo.Client, id primitive.ObjectID) (models.User, error) {
 	collection := client.Database("core").Collection("users")
 	var bsonUser bson.M
@@ -123,11 +159,24 @@ func UpdateUser(dbClient *mongo.Client, id primitive.ObjectID, user models.User)
 	return result, err
 }
 
+/// Update DbEntity by ID
+func UpdateDbEntity(dbClient *mongo.Client, entity models.DbEntity, id primitive.ObjectID, updatedEntity models.DbEntity) (*mongo.UpdateResult, error) {
+	collection := dbClient.Database(entity.DBName()).Collection(entity.CollectionName())
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": updatedEntity.ToBSON(false)}
+	return collection.UpdateOne(context.Background(), filter, update)
+}
+
 /// Delete a user by ID
-func DeleteUser(dbClient *mongo.Client, id primitive.ObjectID) (*mongo.DeleteResult, error) {
-	collection := dbClient.Database("core").Collection("users")
-	result, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
-	return result, err
+// func DeleteUser(dbClient *mongo.Client, id primitive.ObjectID) (*mongo.DeleteResult, error) {
+// 	collection := dbClient.Database("core").Collection("users")
+// 	result, err := collection.DeleteOne(context.Background(), bson.M{"_id": id})
+// 	return result, err
+// }
+func DeleteDbEntity(dbClient *mongo.Client, entity models.DbEntity, id primitive.ObjectID) (*mongo.DeleteResult, error) {
+	collection := dbClient.Database(entity.DBName()).Collection(entity.CollectionName())
+    filter := bson.M{"_id": id}
+    return collection.DeleteOne(context.Background(), filter)
 }
 
 // // Ping Function

@@ -9,6 +9,7 @@ type DbEntity interface {
     DBName() string
     CollectionName() string
     ToBSON(bool) bson.M
+    FromBSON(bson.M) DbEntity
     GetID() primitive.ObjectID
     SetID(id primitive.ObjectID)
 }
