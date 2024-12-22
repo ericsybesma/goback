@@ -90,7 +90,7 @@ func registerRoutes(engine *gin.Engine, resourceName string, dbEntity models.DbE
 	engine.GET(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { ReadAll(c, dbEntity) })
 	engine.GET(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Read(c, dbEntity) })
 	engine.PUT(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Update(c, dbEntity) })
-	//engine.DELETE(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { DoDelete(c, dbEntity) })
+	engine.DELETE(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Delete(c, dbEntity) })
 }
 
 func registerRoot(engine *gin.Engine) {

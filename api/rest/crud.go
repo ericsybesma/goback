@@ -62,23 +62,22 @@ func Update(c *gin.Context, dbEntity models.DbEntity) {
 		return
 	}
 
-	var entity models.DbEntity
-	if err := c.ShouldBindJSON(&entity); err != nil {
+	if err := c.ShouldBindJSON(dbEntity); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	entity.SetID(objectID)
-	_, err = database.UpdateDbEntity(dbClient, dbEntity, objectID, entity)
+	dbEntity.SetID(objectID)
+	_, err = database.UpdateDbEntity(dbClient, dbEntity)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, entity)
+	c.JSON(http.StatusOK, dbEntity)
 }
 
-func DoDelete(c *gin.Context, dbEntity models.DbEntity) {
+func Delete(c *gin.Context, dbEntity models.DbEntity) {
 	id := c.Param("id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
