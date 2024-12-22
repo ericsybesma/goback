@@ -1,6 +1,6 @@
 build:
-	GOOS=linux GOARCH=amd64 go build -o api/rest/bootstrap api/rest/main.go
-	#GOOS=linux GOARCH=amd64 go build -o api/graphql/bootstrap api/graphql/main.go
+	GOOS=linux GOARCH=amd64 go build -o ./api/rest/bootstrap ./api/rest
+	#GOOS=linux GOARCH=amd64 go build -o ./api/graphql/bootstrap ./api/graphql
 
 zip:
 	zip -j api/rest/main.zip api/rest/bootstrap
