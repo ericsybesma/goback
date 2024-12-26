@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/seebasoft/prompter/goback/database"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -34,7 +35,7 @@ func (u User) ToBSON(addId bool) bson.M {
 	}
 }
 
-func (u User) FromBSON(bsonUser bson.M) DbEntity {
+func (u User) FromBSON(bsonUser bson.M) database.DalEntity {
 	return &User{
 		ID:       bsonUser["_id"].(primitive.ObjectID),
 		Username: bsonUser["username"].(string),
@@ -47,5 +48,5 @@ func (u User) GetID() primitive.ObjectID {
 }
 
 func (u *User) SetID(id primitive.ObjectID) {
-        u.ID = id
+	u.ID = id
 }

@@ -37,15 +37,6 @@ func convertHeader(header http.Header) map[string]string {
 
 // lambdaHandler handles Lambda requests and routes them using Gin
 func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	// Ensure log output is set to stdout
-	log.SetOutput(os.Stdout)
-	log.Println("Received request path:", req.RawPath)
-	log.Println("HTTP Method:", req.RequestContext.HTTP.Method)
-	log.Println("Request Headers:", req.Headers)
-	// Explicitly flush logs
-	log.Println("Flushing logs")
-	log.Writer().(*os.File).Sync()
-
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
 	httpReq, _ := http.NewRequest(req.RequestContext.HTTP.Method, req.RawPath, bytes.NewBufferString(req.Body))
@@ -55,8 +46,6 @@ func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPR
 	log.Println("Response Status Code:", w.Code)
 	log.Println("Response Headers:", w.Header())
 	log.Println("Response Body: ", w.Body.String())
-
-	// Explicitly flush logs
 	log.Writer().(*os.File).Sync()
 
 	return events.APIGatewayV2HTTPResponse{
@@ -85,28 +74,28 @@ func main() {
 	}
 }
 
-func registerRoutes(engine *gin.Engine, resourceName string, dbEntity models.DbEntity) {
-	engine.POST(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { Create(c, dbEntity) })
-	engine.GET(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { ReadAll(c, dbEntity) })
-	engine.GET(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Read(c, dbEntity) })
-	engine.PUT(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Update(c, dbEntity) })
-	engine.DELETE(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { Delete(c, dbEntity) })
+func setupResourceRoutes(engine *gin.Engine, resourceName string, dalEntity database.DalEntity) {
+	engine.POST(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { Create(c, dalEntity) })
+	engine.GET(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { ReadByID(c, dalEntity) })
+	engine.GET(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { ReadByFilter(c, dalEntity) })
+	engine.PUT(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { UpdateByID(c, dalEntity) })
+	engine.DELETE(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { DeleteByID(c, dalEntity) })
 }
 
-func registerRoot(engine *gin.Engine) {
+func setupRootRoute(engine *gin.Engine) {
 	engine.GET("/", getRoot)
 }
 
 func initGin() *gin.Engine {
 	engine := gin.Default()
-	registerRoot(engine)
-	registerRoutes(engine, "users", &models.User{})
+	setupRootRoute(engine)
+	setupResourceRoutes(engine, "users", &models.User{})
 	return engine
 }
 
 func initDb() *mongo.Client {
 	var err error
-	client, err := database.ConnectToMongoDB()
+	client, err := database.MongoConnect()
 	if err != nil {
 		log.Fatalf("failed to connect to MongoDB: %v", err)
 	}

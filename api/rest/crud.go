@@ -5,39 +5,36 @@ import (
 	"net/http"
 
 	"github.com/seebasoft/prompter/goback/database"
-	"github.com/seebasoft/prompter/goback/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Create(c *gin.Context, dbEntity models.DbEntity) {
-	if err := c.ShouldBindJSON(dbEntity); err != nil {
+// Implement handlers that correspond to all of the DalRepo options
+
+// Provide a CRUD interface for database.DalEntity, enabling a REST API for
+// any entity implementing this interface.
+func Create(c *gin.Context, dalEntity database.DalEntity) {
+
+	if err := c.ShouldBindJSON(dalEntity); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	dbEntity.SetID(primitive.NewObjectID())
-	_, err := database.CreateDbEntity(dbClient, dbEntity)
+
+	dalRepo := database.NewMongoDalRepo(dbClient, dalEntity, c.Request.Context())
+	dalEntity.SetID(primitive.NewObjectID())
+	objectID, err := dalRepo.Create(dalEntity)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, dbEntity)
+
+	dalEntity.SetID(objectID)
+	c.JSON(http.StatusCreated, dalEntity)
 }
 
-// do a readAll using DbEntity rather than getUsers
-func ReadAll(c *gin.Context, dbEntity models.DbEntity) {
-	entities, err := database.GetAll(dbClient, dbEntity)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, entities)
-}
-
-func Read(c *gin.Context, dbEntity models.DbEntity) {
+func ReadByID(c *gin.Context, dalEntity database.DalEntity) {
 	id := c.Param("id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -45,7 +42,9 @@ func Read(c *gin.Context, dbEntity models.DbEntity) {
 		return
 	}
 
-	entity, err := database.GetDbEntityByID(dbClient, dbEntity, objectID)
+	dalRepo := database.NewMongoDalRepo(dbClient, dalEntity, c.Request.Context())
+	entity, err := dalRepo.ReadByID(objectID)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -54,7 +53,26 @@ func Read(c *gin.Context, dbEntity models.DbEntity) {
 	c.JSON(http.StatusOK, entity)
 }
 
-func Update(c *gin.Context, dbEntity models.DbEntity) {
+func ReadByFilter(c *gin.Context, dalEntity database.DalEntity) {
+	var filter map[string]interface{}
+
+	// if err := c.ShouldBindJSON(&filter); err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// 	return
+	// }
+
+	dalRepo := database.NewMongoDalRepo(dbClient, dalEntity, c.Request.Context())
+	entities, err := dalRepo.ReadByFilter(filter, 1, 50)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, entities)
+}
+
+func UpdateByID(c *gin.Context, dalEntity database.DalEntity) {
 	id := c.Param("id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -62,22 +80,23 @@ func Update(c *gin.Context, dbEntity models.DbEntity) {
 		return
 	}
 
-	if err := c.ShouldBindJSON(dbEntity); err != nil {
+	if err := c.ShouldBindJSON(dalEntity); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	dbEntity.SetID(objectID)
-	_, err = database.UpdateDbEntity(dbClient, dbEntity)
+	dalEntity.SetID(objectID)
+	dalRepo := database.NewMongoDalRepo(dbClient, dalEntity, c.Request.Context())
+	_, err = dalRepo.UpdateByID(objectID, dalEntity)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, dbEntity)
+	c.JSON(http.StatusOK, dalEntity)
 }
 
-func Delete(c *gin.Context, dbEntity models.DbEntity) {
+func DeleteByID(c *gin.Context, dalEntity database.DalEntity) {
 	id := c.Param("id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -86,20 +105,21 @@ func Delete(c *gin.Context, dbEntity models.DbEntity) {
 	}
 
 	// Save the result to get the DeletedCount
-	result, err := database.DeleteDbEntity(dbClient, dbEntity, objectID)
+	dalRepo := database.NewMongoDalRepo(dbClient, dalEntity, c.Request.Context())
+	deletedCount, err := dalRepo.DeleteByID(objectID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if result.DeletedCount == 0 {
+	if deletedCount == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "No entity found to delete"})
 		return
 	}
 
 	label := "entries"
-	if result.DeletedCount == 1 {
+	if deletedCount == 1 {
 		label = "entry"
 	}
-	msg := fmt.Sprintf("Deleted %d %s", result.DeletedCount, label)
+	msg := fmt.Sprintf("Deleted %d %s", deletedCount, label)
 	c.JSON(http.StatusOK, gin.H{"message": msg})
 }

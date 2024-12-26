@@ -208,7 +208,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/goback-rest/dev/1734472316329-2024-12-17T21:51:56.329Z/main.zip"
+          "S3Key": "serverless/goback-rest/dev/1735186966131-2024-12-26T04:22:46.131Z/main.zip"
         },
         "Handler": "api/rest/bootstrap",
         "Runtime": "provided.al2",
@@ -226,14 +226,14 @@
         "ApiLogGroup"
       ]
     },
-    "ApiLambdaVersionJvliqLFpGEtDF1iPGRfUVoDSgGV1uk5dlt3h2Rbkw": {
+    "ApiLambdaVersionVUWqIbJ7fEHorrLmMi3RgPTqxiysYkk2Vhvhf9Nihc": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ApiLambdaFunction"
         },
-        "CodeSha256": "nucbB5EPkQ0JgZDi7p36X6MzHiLQBWGr2TGiRxLKYsM="
+        "CodeSha256": "QP41j3J8SVc7g4FfrVWItwa8dAKNTtPNwAkO9GsUMlE="
       }
     },
     "HttpApi": {
@@ -392,7 +392,7 @@
     "ApiLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ApiLambdaVersionJvliqLFpGEtDF1iPGRfUVoDSgGV1uk5dlt3h2Rbkw"
+        "Ref": "ApiLambdaVersionVUWqIbJ7fEHorrLmMi3RgPTqxiysYkk2Vhvhf9Nihc"
       },
       "Export": {
         "Name": "sls-goback-rest-dev-ApiLambdaFunctionQualifiedArn"
