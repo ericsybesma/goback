@@ -20,11 +20,25 @@ import (
 var ginEngine *gin.Engine
 var dbClient *mongo.Client
 
-func getRoot(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"title": "Hello API Handler",
-		"body":  "Endpoints: /rest/users",
-	})
+func main() {
+	initialize()
+	run()
+}
+
+func initialize() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	ginEngine = initGin()
+	dbClient = initDb()
+}
+
+func run() {
+	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
+		// Running in Lambda
+		lambda.Start(lambdaHandler)
+	} else {
+		// Running locally
+		ginEngine.Run(":8080")
+	}
 }
 
 func convertHeader(header http.Header) map[string]string {
@@ -43,11 +57,6 @@ func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPR
 	ctx.Request = httpReq
 	ginEngine.ServeHTTP(w, ctx.Request)
 
-	log.Println("Response Status Code:", w.Code)
-	log.Println("Response Headers:", w.Header())
-	log.Println("Response Body: ", w.Body.String())
-	log.Writer().(*os.File).Sync()
-
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode: w.Code,
 		Headers:    convertHeader(w.Header()),
@@ -55,26 +64,14 @@ func lambdaHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPR
 	}, nil
 }
 
-func main() {
-	// Set log flags to include date and time
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
-	ginEngine = initGin()
-
-	// Initialize dbClient
-	dbClient = initDb()
-
-	// Determine if running in Lambda or locally
-	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
-		// Running in Lambda
-		lambda.Start(lambdaHandler)
-	} else {
-		// Running locally
-		ginEngine.Run(":8080")
-	}
+func getRoot(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"title": "Hello API Handler",
+		"body":  "Endpoints: /rest/users",
+	})
 }
 
-func setupResourceRoutes(engine *gin.Engine, resourceName string, dalEntity database.DalEntity) {
+func setDefaultRoutes(engine *gin.Engine, resourceName string, dalEntity database.DalEntity) {
 	engine.POST(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { Create(c, dalEntity) })
 	engine.GET(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { ReadByID(c, dalEntity) })
 	engine.GET(fmt.Sprintf("/rest/%s", resourceName), func(c *gin.Context) { ReadByFilter(c, dalEntity) })
@@ -82,14 +79,10 @@ func setupResourceRoutes(engine *gin.Engine, resourceName string, dalEntity data
 	engine.DELETE(fmt.Sprintf("/rest/%s/:id", resourceName), func(c *gin.Context) { DeleteByID(c, dalEntity) })
 }
 
-func setupRootRoute(engine *gin.Engine) {
-	engine.GET("/", getRoot)
-}
-
 func initGin() *gin.Engine {
 	engine := gin.Default()
-	setupRootRoute(engine)
-	setupResourceRoutes(engine, "users", &models.User{})
+	engine.GET("/", getRoot)
+	setDefaultRoutes(engine, "users", &models.User{})
 	return engine
 }
 

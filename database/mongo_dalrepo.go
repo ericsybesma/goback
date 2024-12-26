@@ -1,32 +1,33 @@
 package database
 
 import (
-    "context"
-    "fmt"
+	"context"
+	"fmt"
 
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/primitive"
-    "go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type MongoDalRepo struct {
-    client *mongo.Client
+	client     *mongo.Client
 	entityType DalEntity
-	ctx context.Context
+	ctx        context.Context
 }
 
 // Adapt NewMongoDalRepo to return the interface
 func NewMongoDalRepo(client *mongo.Client, entityType DalEntity, ctx context.Context) DalRepo {
-    return &MongoDalRepo{client: client, entityType: entityType, ctx: ctx}
+	return &MongoDalRepo{client: client, entityType: entityType, ctx: ctx}
 }
 
 func (r *MongoDalRepo) Create(entity DalEntity) (primitive.ObjectID, error) {
 	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
-	result, err := collection.InsertOne(r.ctx, entity.ToBSON(true))
+	result, err := collection.InsertOne(r.ctx, entity)
 	if err != nil {
 		return primitive.NilObjectID, fmt.Errorf("creating entity: %w", err)
 	}
+
 	insertedID := result.InsertedID.(primitive.ObjectID)
 	return insertedID, nil
 }
@@ -44,7 +45,7 @@ func (r *MongoDalRepo) ReadByID(id primitive.ObjectID) (DalEntity, error) {
 
 func (r *MongoDalRepo) ReadByFilter(filter bson.M, page int64, pageSize int64) ([]DalEntity, error) {
 	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
-	
+
 	// alter these options by parsing the filter (TODO)
 	findOptions := options.Find().SetSkip((page - 1) * pageSize).SetLimit(pageSize)
 	cursor, err := collection.Find(r.ctx, bson.D{}, findOptions)
@@ -68,7 +69,7 @@ func (r *MongoDalRepo) ReadByFilter(filter bson.M, page int64, pageSize int64) (
 func (r *MongoDalRepo) UpdateByID(id primitive.ObjectID, update DalEntity) (int64, error) {
 	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
 	filter := bson.M{"_id": r.entityType.GetID()}
-	updateResult, err := collection.ReplaceOne(r.ctx, filter, update.ToBSON(false))
+	updateResult, err := collection.ReplaceOne(r.ctx, filter, update)
 	if err != nil {
 		return 0, fmt.Errorf("updating entity: %w", err)
 	}
