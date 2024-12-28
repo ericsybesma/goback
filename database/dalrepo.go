@@ -1,8 +1,8 @@
 package database
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type DalEntity interface {
@@ -17,12 +17,7 @@ type DalRepo interface {
 	Create(update DalEntity) (primitive.ObjectID, error)
 	ReadByID(id primitive.ObjectID) (DalEntity, error)
 	ReadByFilter(filter bson.M, page int64, pageSize int64) ([]DalEntity, error)
+	ReadBSON(filter bson.M, page int64, pageSize int64) ([]bson.M, error)
 	UpdateByID(id primitive.ObjectID, update DalEntity) (int64, error)
 	DeleteByID(id primitive.ObjectID) (int64, error)
-}
-
-type DalRpc interface {
-	DalRepo
-	UpdatePartialByFilter(filter bson.M, update bson.M) (int64, error)
-	DeleteByFilter(filter bson.M) (int64, error)
 }

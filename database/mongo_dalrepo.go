@@ -44,26 +44,27 @@ func (r *MongoDalRepo) ReadByID(id primitive.ObjectID) (DalEntity, error) {
 }
 
 func (r *MongoDalRepo) ReadByFilter(filter bson.M, page int64, pageSize int64) ([]DalEntity, error) {
-	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
-
-	// alter these options by parsing the filter (TODO)
-	findOptions := options.Find().SetSkip((page - 1) * pageSize).SetLimit(pageSize)
-	cursor, err := collection.Find(r.ctx, bson.D{}, findOptions)
-	if err != nil {
-		return nil, fmt.Errorf("listing entities by filter: %w", err)
-	}
-	defer cursor.Close(r.ctx)
-
-	var bsonEntities []bson.M
-	if err = cursor.All(context.Background(), &bsonEntities); err != nil {
-		return nil, fmt.Errorf("failed to decode entities: %w", err)
-	}
-
-	var entities []DalEntity
+	bsonEntities, _ := r.ReadBSON(filter, page, pageSize)
+	entities := make([]DalEntity, 0, len(bsonEntities))
 	for _, bsonEntity := range bsonEntities {
 		entities = append(entities, r.entityType.FromBSON(bsonEntity))
 	}
 	return entities, nil
+}
+
+func (r *MongoDalRepo) ReadBSON(filter bson.M, page int64, pageSize int64) ([]bson.M, error) {
+	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
+	findOptions := options.Find().SetSkip((page - 1) * pageSize).SetLimit(pageSize)
+	cursor, err := collection.Find(r.ctx, filter, findOptions)
+	if err != nil {
+		return nil, fmt.Errorf("reading entities by filter: %w", err)
+	}
+	defer cursor.Close(r.ctx)
+	var bsonEntities []bson.M
+	if err = cursor.All(r.ctx, &bsonEntities); err != nil {
+		return nil, fmt.Errorf("failed to decode entities: %w", err)
+	}
+	return bsonEntities, nil
 }
 
 func (r *MongoDalRepo) UpdateByID(id primitive.ObjectID, update DalEntity) (int64, error) {
@@ -76,15 +77,6 @@ func (r *MongoDalRepo) UpdateByID(id primitive.ObjectID, update DalEntity) (int6
 	return updateResult.ModifiedCount, nil
 }
 
-// func (r *MongoDalRepo) UpdateByFilter(ctx *context.Context, filter bson.M, update bson.M) (int64, error) {
-// 	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
-// 	updateResult, err := collection.UpdateMany(*ctx, filter, bson.M{"$set": update})
-// 	if err != nil {
-// 		return 0, fmt.Errorf("updating entities by filter: %w", err)
-// 	}
-// 	return updateResult.ModifiedCount, nil
-// }
-
 func (r *MongoDalRepo) DeleteByID(id primitive.ObjectID) (int64, error) {
 	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
 	filter := bson.M{"_id": id}
@@ -94,12 +86,3 @@ func (r *MongoDalRepo) DeleteByID(id primitive.ObjectID) (int64, error) {
 	}
 	return deleteResult.DeletedCount, nil
 }
-
-// func (r *MongoDalRepo) DeleteByFilter(ctx *context.Context, filter bson.M) (int64, error) {
-// 	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
-// 	deleteResult, err := collection.DeleteMany(*ctx, filter)
-// 	if err != nil {
-// 		return 0, fmt.Errorf("deleting entities by filter: %w", err)
-// 	}
-// 	return deleteResult.DeletedCount, nil
-// }

@@ -9,10 +9,10 @@ import (
 )
 
 type User struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Username string             `bson:"username" json:"username"`
-	Email    string             `bson:"email" json:"email"`
-	Birthdate time.Time		    `bson:"birthdate" json:"birthdate"`
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Username  string             `bson:"username" json:"username"`
+	Email     string             `bson:"email" json:"email"`
+	Birthdate time.Time          `bson:"birthdate" json:"birthdate"`
 }
 
 func (u User) DBName() string {
@@ -23,20 +23,21 @@ func (u User) CollectionName() string {
 	return "users"
 }
 
-// func (u User) ToBSON() ([]byte, error) {
-//     bsonUser, err := bson.Marshal(u)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("bson marshaling error: %w", err)
-// 	}
-// 	return bsonUser, err
-// }
-
-func (u User) FromBSON(bsonUser bson.M) database.DalEntity {
-	return &User{
-		ID:       bsonUser["_id"].(primitive.ObjectID),
-		Username: bsonUser["username"].(string),
-		Email:    bsonUser["email"].(string),
+func (u *User) FromBSON(bsonUser bson.M) database.DalEntity {
+	// need to return a new instance of the entity
+	user := &User{}
+	if birthdate, ok := bsonUser["birthdate"].(time.Time); ok {
+		user.ID = bsonUser["_id"].(primitive.ObjectID)
+		user.Username = bsonUser["username"].(string)
+		user.Email = bsonUser["email"].(string)
+		user.Birthdate = birthdate
+	} else {
+		user.ID = bsonUser["_id"].(primitive.ObjectID)
+		user.Username = bsonUser["username"].(string)
+		user.Email = bsonUser["email"].(string)
+		user.Birthdate, _ = time.Parse(time.RFC3339, "1970-01-01T00:00:00Z")
 	}
+	return user
 }
 
 func (u User) GetID() primitive.ObjectID {
