@@ -52,6 +52,8 @@ func (r *MongoDalRepo) ReadByFilter(filter bson.M, page int64, pageSize int64) (
 	return entities, nil
 }
 
+// ReadBSON is a helper function to read bson.M entities, but data returned to the user should be
+// validated first with the FromBSON method of the entity type.
 func (r *MongoDalRepo) ReadBSON(filter bson.M, page int64, pageSize int64) ([]bson.M, error) {
 	collection := r.client.Database(r.entityType.DBName()).Collection(r.entityType.CollectionName())
 	findOptions := options.Find().SetSkip((page - 1) * pageSize).SetLimit(pageSize)

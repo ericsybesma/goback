@@ -66,24 +66,13 @@ func ReadByFilter(c *gin.Context, dalEntity database.DalEntity) {
 	}
 
 	dalRepo := database.NewMongoDalRepo(dbClient, dalEntity, c.Request.Context())
-	bsonEntities, err := dalRepo.ReadBSON(filter, 1, 100)
+	bsonEntities, err := dalRepo.ReadByFilter(filter, 1, 100)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	remapMongoIDs(bsonEntities)
 	c.JSON(http.StatusOK, bsonEntities)
-}
-
-func remapMongoIDs(bsonEntities []bson.M) {
-	// handle re-mapping of _id to id
-	for _, result := range bsonEntities {
-		if id, ok := result["_id"]; ok { // Check if _id exists
-			result["id"] = id     // Assign the value to the new key
-			delete(result, "_id") // Delete the old key
-		}
-	}
 }
 
 func ExtractFilter(c *gin.Context, dalEntity database.DalEntity) (bson.M, error) {
