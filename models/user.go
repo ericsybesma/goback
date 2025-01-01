@@ -3,9 +3,10 @@ package models
 import (
 	"time"
 
-	"github.com/seebasoft/prompter/goback/database"
+	"github.com/seebasoft/prompter/goback/dal"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"errors"
 )
 
 type User struct {
@@ -15,37 +16,59 @@ type User struct {
 	Birthdate time.Time          `bson:"birthdate" json:"birthdate"`
 }
 
-func (u User) DBName() string {
+func (u *User) Namespace() string {
 	return "core"
 }
 
-func (u User) CollectionName() string {
+func (u *User) ItemGroup() string {
 	return "users"
 }
 
-func (u *User) FromBSON(bsonUser bson.M) database.DalEntity {
-	// need to return a new instance of the entity
-	user := &User{}
-	if birthdate, ok := bsonUser["birthdate"].(time.Time); ok {
-		user.ID = bsonUser["_id"].(primitive.ObjectID)
-		user.Username = bsonUser["username"].(string)
-		user.Email = bsonUser["email"].(string)
-		user.Birthdate = birthdate
-	} else {
-		user.ID = bsonUser["_id"].(primitive.ObjectID)
-		user.Username = bsonUser["username"].(string)
-		user.Email = bsonUser["email"].(string)
-		user.Birthdate, _ = time.Parse(time.RFC3339, "1970-01-01T00:00:00Z")
+func (u *User) Marshal() ([]byte, error) {
+	return bson.Marshal(u)
+}
+
+func (u *User) Unmarshal(raw []byte) error {
+	if err := bson.Unmarshal(raw, u); err != nil {
+		return err
 	}
-	return user
+
+	if u.Birthdate.IsZero() {
+		u.Birthdate = time.Time{}
+	}
+
+	if u.ID == primitive.NilObjectID {
+		u.ID = primitive.NewObjectID()
+	}
+
+	if u.Username == "" {
+		u.Username = ""
+	}
+
+	if u.Email == "" {
+		u.Email = ""
+	}
+
+	return nil
 }
 
-func (u User) GetID() primitive.ObjectID {
+
+func (u *User) New() dal.Item {
+	return &User{}
+}	
+
+func (u *User) GetKey() interface{} {
 	return u.ID
-}
+}	
 
-func (u *User) SetID(id primitive.ObjectID) {
-	u.ID = id
+var ErrInvalidKey = errors.New("invalid key")
+
+func (u *User) SetKey(key interface{}) error {
+	if id, ok := key.(primitive.ObjectID); ok {
+		u.ID = id
+		return nil
+	}
+	return ErrInvalidKey
 }
 
 // // User represents a user in the system.
